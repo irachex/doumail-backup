@@ -1,0 +1,10 @@
+{% for mail in mails %}
+来自: {{mail.author_name}} ( {{ mail.author_id }} )
+时间: {{mail.time}}
+话题: {{ mail.title }}
+内容: 
+{{ mail.content }}
+
+=================================================================================
+
+{% endfor %}

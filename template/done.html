@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block header_menu %}
+	<a href="/logout/">换个帐号</a>
+{% endblock %}
+{% block content %}
+		<div id="content">
+	        <ol> 		
+	            <li class="done"> 
+	                <h5 class="step_1_done"><span>与豆瓣{{name}}连接成功</span></h5>
+	            </li> 
+	            <li class="done">
+	                <h5 class="step_2_done"><span>输入用于接收备份的邮箱</span></h5>
+	            </li>
+	            <li>
+	                <h5>完成咯 ^ ^</h5>
+	                <h5>由于API限制服务器需要花几分钟来计算，备份完成后会发到你的邮箱中，请耐心等待</h5>
+	            </li>
+	        </ol>
+        </div>
+{% endblock %}

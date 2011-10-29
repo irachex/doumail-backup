@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block nav %}
+	                    <ul>
+	                        <li class="dactive"><a href="/doumail/">豆邮备份</a></li>
+                    </ul>
+{% endblock %}
+{% block header_menu %}
+	<a href="/logout/">换个帐号</a>
+{% endblock %}
+{% block content %}
+		<div id="content">
+	        <ol> 		
+	            <li class="done"> 
+	                <h5 class="step_1_done"><span>与豆瓣{{name}}连接成功</span></h5>
+	            </li> 
+	            <li class="todo">
+	                <h5 class="step_2_todo">输入用于接收备份的邮箱</h5>
+	                <form action="/option/" method="post">
+	                <input type="text" id="email" name="email" />
+	                <input type="submit" value="好了" class="btn_submit"/>
+                    </form>
+	            </li> 
+	        </ol>
+        </div>
+{% endblock %}

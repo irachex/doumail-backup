@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block nav %}
+	                    <ul>
+                        <li class="dactive"><a href="/doumail/">豆邮备份</a></li>
+                    </ul>
+{% endblock %}
+{% block content %}
+		<div id="content">
+			<ol>			    
+	            <li class="todo"> 
+	                <h5 class="step_1_todo">连接豆瓣</h5>
+	                <div class="list_item">
+	                    <a href="{{ douban_url }}"><img src="/static/img/doubanconnect.png" alt="douban connect"/></a>
+	                </div>
+	            </li> 
+	            <li class="todo"> 
+	                <h5 class="step_2_todo">输入用于接收备份的邮箱</h5>  
+	            </li> 
+	        </ol>
+	    </div> 
+{% endblock %}
