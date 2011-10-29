@@ -2,8 +2,7 @@
 # -*- coding: UTF-8 -*-
 TIME_DELTA = 60*10
 
-DB_API_KEY = '0f6441c5cccf1c4f2e2cc551666d54ed'
-DB_API_SECRET = 'f4c053f93cf26550'
+DB_API_KEY = ''
+DB_API_SECRET = ''
 
 ADMIN_MAIL = 'irachex@gmail.com'
-BACKUP_MAIL = 'imdobot@gmail.com'
