@@ -50,6 +50,7 @@ def sign(method, url, params, secret, token_secret):
     if token_secret:
         key += escape(token_secret)
     base_string = '&'.join(sig)
+    key = str(key)
     return binascii.b2a_base64(hmac.new(key, base_string, hashlib.sha1).digest())[:-1]
  
 def generate_header(method, url, params, key, token):

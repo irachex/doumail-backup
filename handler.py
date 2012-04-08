@@ -51,6 +51,7 @@ class BaseHandler(webapp.RequestHandler):
         self.response.out.write(template.render(temp_path, data))
     
     def render_string(self, template_name, data=None):
+        temp_path = os.path.join(os.path.dirname(__file__), 'template/%s' % (template_name,))
         return template.render(temp_path, data)
         
     
