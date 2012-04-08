@@ -16,7 +16,7 @@ from google.appengine.ext import db
 
 from model import Account, Mail
 from douban.robot import DoubanRobot
-from config import DB_API_KEY, DB_API_SECRET
+from config import DB_API_KEY, DB_API_SECRET, ADMIN_MAIL
 
 
 class BaseHandler(webapp.RequestHandler):
@@ -33,7 +33,7 @@ class BaseHandler(webapp.RequestHandler):
         sid = self.get_current_session()
         return memcache.set(key=(sid+key), value=value, time=3600)
         
-    def get_session(self, key):
+    def get_session(self, key, default=None):
         sid = self.get_current_session()
         return memcache.get(sid+key)
     
@@ -51,7 +51,6 @@ class BaseHandler(webapp.RequestHandler):
         self.response.out.write(template.render(temp_path, data))
     
     def render_string(self, template_name, data=None):
-        temp_path = os.path.join(os.path.dirname(__file__), 'template/%s' % (template_name,))
         return template.render(temp_path, data)
         
     
@@ -115,7 +114,7 @@ class OptionHandler(BaseHandler):
                                    });
     
     def post(self):
-        email = escape(self.request.get("email"))
+        email = self.request.get("email")
         self.set_session("email", email)
         
         uid = self.get_session("uid")
@@ -162,15 +161,16 @@ class DoneHandler(BaseHandler):
 class AboutHandler(BaseHandler):
     def get(self):
         uid="iRachex"
-        email = "irachex@gmail.com"
+        email = self.get_session("email")
         mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1", uid)
         recvmails = self.render_string("doumail.txt", {"mails":mail_list})
-       
+        logging.info(recvmails)
+        
         mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1", uid)
         sendmails = self.render_string("doumail.txt", {"mails":mail_list})
         
-        mail.send_mail(sender="irachex@gmail.com",
-                       to=email,#.replace("%40", "@"),
+        mail.send_mail(sender="no-reply@doubackup.com",
+                       to=email,
                        subject="豆邮备份",
                        body="""
                        你的豆邮备份
@@ -199,30 +199,28 @@ class FetchHandler(BaseHandler):
         total = self.request.get("total")
         
         doubanbot = DoubanRobot(token_key, token_secret, DB_API_KEY, DB_API_SECRET)
-        try:
-            mail_list = doubanbot.get_mails(recv=recv, start=start, cnt=count, uid=uid, name=title)
-        except:
-            logging.info("stop task %s %s %s %s" %(uid, recv, start, total))
-            return
-        #    self.render("msg.html", {"msg":"豆邮太多收不过来了，请稍后再试吧", "url":"/"})
+        mail_list = doubanbot.get_mails(recv=recv, start=start, cnt=count, uid=uid, name=title)
         if not mail_list:
             if recv:
+                # fetch send doumail
                 recv = False
             else:
+                # fetch done. send backup to user's email
                 mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1 AND recv=:2", uid, True)
                 recvmails = self.render_string("doumail.txt", {"mails":mail_list})
 
                 mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1 AND recv=:2", uid, False)
                 sendmails = self.render_string("doumail.txt", {"mails":mail_list})
                 
-                mail.send_mail(sender="irachex@gmail.com",
-                               to=email.replace("%40", "@"),
+                mail.send_mail(sender=ADMIN_EMAIL,
+                               to=email,
                                subject="豆邮备份",
                                body="""
                                你的豆邮备份
                                """,
                                attachments=[("收件箱.txt",recvmails),("发件箱.txt",sendmails)])
                 return
+
         fqueue = taskqueue.Queue(name='fetch')
         ftask = taskqueue.Task(url='/fetch/', 
                                params={
@@ -235,7 +233,8 @@ class FetchHandler(BaseHandler):
                                    "start":int(start)+int(count), 
                                    "count":count, 
                                    "total":int(total)+int(count)
-                               })
+                               },
+                               countdown=60)
         fqueue.add(ftask)
                 
 

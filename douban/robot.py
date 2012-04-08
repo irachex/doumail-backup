@@ -4,10 +4,11 @@
 import logging
 import codecs
 import urllib
-import simplejson as json
+#import simplejson as json
+import json
 
 from client import DoubanOAuth
-from model import Account, Mail
+#from model import Account, Mail
 
 ME_URI = "/people/@me"
 MINIBLOG_URI = "/people/@me/miniblog"
@@ -45,10 +46,14 @@ class DoubanRobot(object):
         url = MAIL_INBOX
         if not recv:
             url = MAIL_OUTBOX
-            
+
+#        try:
         jsondata = self.get(url, param={"max-results":str(cnt), "start-index": str(start), "alt":"json"}).read()
+        print jsondata
         data = json.loads(jsondata)
-        
+   #     except:
+#            return []
+
         mail_list = []
         entries = data["entry"]
         for entry in entries:
@@ -96,11 +101,11 @@ def escape(s):
         
 
 def test():
+    from config import DB_API_KEY, DB_API_SECRET
     robot = DoubanRobot(api_key=DB_API_KEY, api_secret=DB_API_SECRET)
-    douban_url = doubanbot.get_auth_url()
+    raw_input(robot.get_auth_url())
     
-    
-    #robot.fetch_mails()
+    robot.get_mails()
         
     
 if __name__ == '__main__':
