@@ -40,7 +40,7 @@ class OAuthClient:
             return False
 
     def fetch_token(self, oauth_request):
-        connection = httplib.HTTPConnection("%s:%d" % (self.server, 80))
+        connection = httplib.HTTPConnection("%s" % (self.server,))
         connection.request('GET', urlparse.urlparse(oauth_request.http_url).path,
             headers=oauth_request.to_header())
         response = connection.getresponse()
@@ -85,16 +85,15 @@ class OAuthClient:
         else:
             return {}
  
-    def access_resource(self, method, url, body=None):
+    def access_resource(self, method, url, body=None, params=None):
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, 
-                token=self.token, http_url=url)
+                token=self.token, http_url=url, parameters=params)
         oauth_request.sign_request(signature_method, self.consumer, self.token)
         headers = oauth_request.to_header()
         if method in ('POST','PUT'):
             headers['Content-Type'] = 'application/atom+xml; charset=utf-8'
-        connection = httplib.HTTPConnection("%s:%d" % (self.server, 80))
-        connection.request(method, url, body=body,
-            headers=headers)
+        connection = httplib.HTTPConnection("%s" % (self.server,))
+        connection.request(method, url, body=body, headers=headers)
         return connection.getresponse()
 
 

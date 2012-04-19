@@ -10,29 +10,30 @@ except:
     import json
 
 from client import OAuthClient
-#from model import Account, Mail
+from model import Account, Mail
 
-ME_URI = "/people/@me"
-MINIBLOG_URI = "/people/@me/miniblog"
-MAIL_INBOX = "/doumail/inbox"
-MAIL_OUTBOX = "/doumail/outbox"
+API_SERVER = 'http://api.douban.com'
+ME_URI = API_SERVER + "/people/%40me"
+MINIBLOG_URI = API_SERVER + "/people/%40me/miniblog"
+MAIL_INBOX = API_SERVER + "/doumail/inbox"
+MAIL_OUTBOX = API_SERVER + "/doumail/outbox"
 
 class DoubanRobot(OAuthClient):
     user = None
     
-    def get(self, url, param=None):
-        return self.access_resource('GET', url, param=param)
+    def get(self, url, body=None, params=None):
+        return self.access_resource('GET', url, body=body, params=params)
 
-    def put(self, url, body=None):
-        return self.access_resource('PUT', url, body and body.encode('utf-8'))
+    def put(self, url, body=None, params=None):
+        return self.access_resource('PUT', url, body and body.encode('utf-8'), params=None)
 
-    def post(self, url, body=None):
-        return self.access_resource('POST', url, body and body.encode('utf-8'))
+    def post(self, url, body=None, params=None):
+        return self.access_resource('POST', url, body and body.encode('utf-8'), params=None)
         
     def get_mail_content(self, mail_id):
         """ get single mail's content """
         mail_id = mail_id.replace("http://api.douban.com/doumail/", "")
-        jsondata = self.get("/doumail/" + mail_id, param={"keep-unread":"true", "alt":"json"}).read()
+        jsondata = self.get(API_SERVER + "/doumail/" + mail_id, params={"keep-unread":"true", "alt":"json"}).read()
         data = json.loads(jsondata)
         return data["content"]["$t"]
         
@@ -43,7 +44,7 @@ class DoubanRobot(OAuthClient):
             url = MAIL_OUTBOX
 
 #        try:
-        jsondata = self.get(url, param={"max-results":str(cnt), "start-index": str(start), "alt":"json"}).read()
+        jsondata = self.get(url, params={"max-results":str(cnt), "start-index": str(start), "alt":"json"}).read()
         data = json.loads(jsondata)
    #     except:
 #            return []
@@ -67,24 +68,14 @@ class DoubanRobot(OAuthClient):
             
             mail_list.append(mail)            
         return mail_list
-    
-    def get_access_token(self, token_key, token_secret):
-        self.client.get_access_token(token_key, token_secret)
         
     def get_current_user(self):
-        data = self.get(ME_URI, param={"alt":"json"}).read()
+        data = self.get(ME_URI, params={"alt":"json"}).read()
+        logging.info( data)
         account = Account()
         account.from_json(data)
         self.user = { "name":account.title, "uid":account.uid }
         return self.user
-        
-    @property
-    def token_key(self):
-        return self.client.token_key
-    
-    @property
-    def token_secret(self):
-        return self.client.token_secret
 
 
 def escape(s):

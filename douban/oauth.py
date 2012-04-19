@@ -8,7 +8,7 @@ import base64
 
 VERSION = '1.0' # Hi Blaine!
 HTTP_METHOD = 'GET'
-SIGNATURE_METHOD = 'PLAINTEXT'
+SIGNATURE_METHOD = 'HMAC_SHA1'
 
 # Generic exception class
 class OAuthError(RuntimeError):
@@ -488,7 +488,9 @@ class OAuthSignatureMethod_HMAC_SHA1(OAuthSignatureMethod):
         if token:
             key += escape(token.secret)
         raw = '&'.join(sig)
-
+        
+        key = str(key)
+        
         # hmac object
         try:
             import hashlib # 2.5
@@ -496,7 +498,7 @@ class OAuthSignatureMethod_HMAC_SHA1(OAuthSignatureMethod):
         except:
             import sha # deprecated
             hashed = hmac.new(key, raw, sha)
-
+        
         # calculate the digest base 64
         return base64.b64encode(hashed.digest())
 

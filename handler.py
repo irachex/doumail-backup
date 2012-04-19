@@ -18,7 +18,6 @@ from model import Account, Mail
 from douban.robot import DoubanRobot
 from config import DB_API_KEY, DB_API_SECRET, ADMIN_MAIL
 
-
 class BaseHandler(webapp.RequestHandler):
     def get_current_session(self):
         value = None
@@ -78,15 +77,18 @@ class AuthHandler(BaseHandler):
 
         callback = self.request.get("callback").strip()
         if callback == "true":
-            token_key = self.request.get("oauth_token").strip()
-            token_secret = self.request.get("oauth_secret").strip()
-            doubanbot.get_access_token(token_key, token_secret)
+            token_key = self.get_session("token_key")
+            token_secret = self.get_session("token_secret")
+            key, secret, uid = doubanbot.get_access_token(token_key, token_secret)
+            if key:
+                doubanbot.login(key, secret)
+                self.set_session("access_key", key)
+                self.set_session("access_secret", secret)
+                
             account = doubanbot.get_current_user()
             #self.render("msg.html", {"msg":"墙挡住了我和豆瓣,等会儿再试试吧", "url":"/"})
             #    return
             
-            self.set_session("token_key", doubanbot.token_key)
-            self.set_session("token_secret", doubanbot.token_secret)
             self.set_session("uid", account["uid"])
             self.set_session("name", account["name"])
             
@@ -94,6 +96,8 @@ class AuthHandler(BaseHandler):
         
         try:
             key, secret = doubanbot.get_request_token()
+            self.set_session("token_key", key)
+            self.set_session("token_secret", secret)
             douban_url = doubanbot.get_authorization_url(key, secret, self.request.url+"?callback=true")
         except Exception,e:
             logging.info(e)
@@ -124,8 +128,8 @@ class OptionHandler(BaseHandler):
         user.uid = uid
         user.email = email
         user.title = self.get_session("name")
-        user.token_key = self.get_session("token_key")
-        user.token_secret = self.get_session("token_secret")
+        user.access_key = self.get_session("access_key")
+        user.access_secret = self.get_session("access_secret")
         user.put()
         
         fqueue = taskqueue.Queue(name='fetch')
@@ -134,8 +138,8 @@ class OptionHandler(BaseHandler):
                                    "uid": user.uid, 
                                    "email": user.email, 
                                    "title":user.title, 
-                                   "token_key":user.token_key, 
-                                   "token_secret":user.token_secret , 
+                                   "access_key":user.access_key, 
+                                   "access_secret":user.access_secret , 
                                    "recv":True, 
                                    "start":1, 
                                    "count":35, 
@@ -193,14 +197,16 @@ class FetchHandler(BaseHandler):
         uid = self.request.get("uid")
         email = self.request.get("email")
         title = self.request.get("title")
-        token_key = self.request.get("token_key")
-        token_secret = self.request.get("token_secret")
+        access_key = self.request.get("access_key")
+        access_secret = self.request.get("access_secret")
         recv = eval(self.request.get("recv"))
         start = self.request.get("start")
         count = self.request.get("count")
         total = self.request.get("total")
         
-        doubanbot = DoubanRobot(token_key, token_secret, DB_API_KEY, DB_API_SECRET)
+        doubanbot = DoubanRobot(key=DB_API_KEY, secret=DB_API_SECRET)
+        doubanbot.login(access_key, access_secret)
+        logging.info(access_key, access_secret)
         mail_list = doubanbot.get_mails(recv=recv, start=start, cnt=count, uid=uid, name=title)
         if not mail_list:
             if recv:
@@ -229,8 +235,8 @@ class FetchHandler(BaseHandler):
                                    "uid": uid, 
                                    "email": email, 
                                    "title": title, 
-                                   "token_key": token_key, 
-                                   "token_secret": token_secret,
+                                   "access_key": access_key, 
+                                   "access_secret": access_secret,
                                    "recv":recv, 
                                    "start":int(start)+int(count), 
                                    "count":count, 

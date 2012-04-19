@@ -12,8 +12,8 @@ class Account(db.Model):
     uid = db.StringProperty()
     title = db.StringProperty()
     email = db.StringProperty()
-    token_key = db.StringProperty(indexed=False)
-    token_secret = db.StringProperty(indexed=False)
+    access_secret = db.StringProperty(indexed=False)
+    access_secret = db.StringProperty(indexed=False)
     
     def from_json(self, jsondata):
         data = json.loads(jsondata)
