@@ -202,7 +202,7 @@ class FetchHandler(BaseHandler):
                 mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1 AND recv=:2", uid, False)
                 sendmails = self.render_string("doumail.txt", {"mails":mail_list})
                 
-                mail.send_mail(sender=ADMIN_EMAIL,
+                mail.send_mail(sender=ADMIN_MAIL,
                                to=email,
                                subject="豆邮备份",
                                body="""
