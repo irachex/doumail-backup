@@ -214,6 +214,7 @@ class FetchHandler(BaseHandler):
                                你的豆邮备份
                                """,
                                attachments=[("收件箱.txt",recvmails),("发件箱.txt",sendmails)])
+                db.GqlQuery("DELETE FROM Mail WHERE uid=:1", uid)
                 return
         
         self.add_fetch_task(uid, email, title, access_key, access_secret, recv, int(start)+int(count), count, int(total)+int(count), 60)
