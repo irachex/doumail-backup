@@ -194,7 +194,6 @@ class FetchHandler(BaseHandler):
         doubanbot.login(access_key, access_secret)
         mail_list = doubanbot.get_mails(recv=recv, start=start, cnt=count, uid=uid, name=title)
         if not mail_list:
-            logging.info(recv)
             if recv:
                 # fetch send doumail
                 self.add_fetch_task(uid, email, title, access_key, access_secret, False, 1, 35, 0, 0)
@@ -203,9 +202,11 @@ class FetchHandler(BaseHandler):
                 # fetch done. send backup to user's email
                 mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1 AND recv=:2", uid, True)
                 recvmails = self.render_string("doumail.txt", {"mails":mail_list})
+                db.delete(mail_list)
 
                 mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1 AND recv=:2", uid, False)
                 sendmails = self.render_string("doumail.txt", {"mails":mail_list})
+                db.delete(mail_list)
                 
                 mail.send_mail(sender=ADMIN_MAIL,
                                to=email,
@@ -214,7 +215,6 @@ class FetchHandler(BaseHandler):
                                你的豆邮备份
                                """,
                                attachments=[("收件箱.txt",recvmails),("发件箱.txt",sendmails)])
-                db.GqlQuery("DELETE FROM Mail WHERE uid=:1", uid)
                 return
         
         self.add_fetch_task(uid, email, title, access_key, access_secret, recv, int(start)+int(count), count, int(total)+int(count), 60)
