@@ -53,6 +53,21 @@ class BaseHandler(webapp.RequestHandler):
         temp_path = os.path.join(os.path.dirname(__file__), 'template/%s' % (template_name,))
         return template.render(temp_path, data)
         
+    def add_fetch_task(self, uid, email, title, access_key, access_secret, recv=True, start=1, count=35, total=0, countdown=0):
+        fqueue = taskqueue.Queue(name='fetch')
+        ftask = taskqueue.Task(url='/fetch/', 
+                               params={
+                                   "uid": uid, 
+                                   "email": email, 
+                                   "title": title, 
+                                   "access_key": access_key, 
+                                   "access_secret": access_secret,
+                                   "recv": recv,
+                                   "start": start,
+                                   "count": count,
+                                   "total": total
+                               }, countdown=countdown) 
+        fqueue.add(ftask)
     
 
 class HomeHandler(BaseHandler):
@@ -132,21 +147,7 @@ class OptionHandler(BaseHandler):
         user.access_secret = self.get_session("access_secret")
         user.put()
         
-        fqueue = taskqueue.Queue(name='fetch')
-        ftask = taskqueue.Task(url='/fetch/', 
-                               params={
-                                   "uid": user.uid, 
-                                   "email": user.email, 
-                                   "title": user.title, 
-                                   "access_key": user.access_key, 
-                                   "access_secret": user.access_secret,
-                                   "recv": True,
-                                   "start": 1,
-                                   "count": 35,
-                                   "total": 0
-                               }) 
-        fqueue.add(ftask)
-        
+        self.add_fetch_task(user.uid, user.email, user.title, user.access_key, user.access_secret, True, 1, 35, 0, 0)
         self.redirect("/done/")
 
 
@@ -176,6 +177,8 @@ class LogoutHandler(BaseHandler):
     
     
 class FetchHandler(BaseHandler):
+    
+    
     def post(self):
         uid = self.request.get("uid")
         email = self.request.get("email")
@@ -191,9 +194,11 @@ class FetchHandler(BaseHandler):
         doubanbot.login(access_key, access_secret)
         mail_list = doubanbot.get_mails(recv=recv, start=start, cnt=count, uid=uid, name=title)
         if not mail_list:
+            logging.info(recv)
             if recv:
                 # fetch send doumail
-                recv = False
+                self.add_fetch_task(uid, email, title, access_key, access_secret, False, 1, 35, 0, 0)
+                return
             else:
                 # fetch done. send backup to user's email
                 mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1 AND recv=:2", uid, True)
@@ -210,23 +215,9 @@ class FetchHandler(BaseHandler):
                                """,
                                attachments=[("收件箱.txt",recvmails),("发件箱.txt",sendmails)])
                 return
+        
+        self.add_fetch_task(uid, email, title, access_key, access_secret, recv, int(start)+int(count), count, int(total)+int(count), 60)
 
-        fqueue = taskqueue.Queue(name='fetch')
-        ftask = taskqueue.Task(url='/fetch/', 
-                               params={
-                                   "uid": uid, 
-                                   "email": email, 
-                                   "title": title, 
-                                   "access_key": access_key, 
-                                   "access_secret": access_secret,
-                                   "recv":recv, 
-                                   "start":int(start)+int(count), 
-                                   "count":count, 
-                                   "total":int(total)+int(count)
-                               },
-                               countdown=60)
-        fqueue.add(ftask)
-                
 
 def escape(s):
     return urllib.quote(s, safe='~')

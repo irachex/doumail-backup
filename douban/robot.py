@@ -42,10 +42,15 @@ class DoubanRobot(OAuthClient):
         url = MAIL_INBOX
         if not recv:
             url = MAIL_OUTBOX
-
-        jsondata = self.get(url, params={"max-results":str(cnt), "start-index": str(start), "alt":"json"}).read()
-        data = json.loads(jsondata)
-
+        
+        try:
+            jsondata = self.get(url, params={"max-results":str(cnt), "start-index": str(start), "alt":"json"}).read()
+            data = json.loads(jsondata)
+        except Exception,e:
+            logging.info(e)
+            logging.info(jsondata)
+            return []
+        
         mail_list = []
         entries = data["entry"]
         for entry in entries:
@@ -88,7 +93,7 @@ def test():
     key, secret = robot.get_request_token()
     raw_input(robot.get_authorization_url(key, secret))
     
-    robot.get_current_user()
+    robot.get_mails(False)
         
     
 if __name__ == '__main__':
