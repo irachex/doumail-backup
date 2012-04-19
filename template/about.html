@@ -1,39 +1,23 @@
-<!doctype html>
-<html lang="zh-CN"> 
-<head> 
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title> 豆瓣同步</title>
-    <link href="/static/css/style.css" rel="stylesheet" type="text/css">
-	<script type="text/javascript">
-
-	  var _gaq = _gaq || [];
-	  _gaq.push(['_setAccount', 'UA-23536848-1']);
-	  _gaq.push(['_trackPageview']);
-
-	  (function() {
-	    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-	    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-	    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-	  })();
-
-	</script>
-</head>
-<body>
-	<div id="wapper"> 
-		<div id="header">
-			<h1>关于</h1>
-			<span class="header_menu">
-				<a href="/">返回首页</a>
-			</span>
-		</div>
-		<div id="main">
-	        <div class="about">
-			欢迎贡献代码<a href="https://github.com/irachex/douban-mail" target="_blank">Github</a><br/>
-			UI参考石头的<a href="http://www.douban.com/group/topic/10150470/">Douban Pulse</a> <br/>
+{% extends "base.html" %}
+{% block nav %}	
+        <ul>
+            <li><a href="/">豆邮备份</a></li>
+            <li class="dactive"><a href="/about/">关于</a></li>
+        </ul>
+{% endblock %}
+{% block content %}
+<div id="content">
+		<div class="about">
+		欢迎贡献代码<a href="https://github.com/irachex/douban-mail" target="_blank">Github</a><br/>
+		UI参考石头的<a href="http://www.douban.com/group/topic/10150470/">Douban Pulse</a> <br/>
 <br/>
 ---<br/><a href="http://www.douban.com/people/irachex/">irachex</a>
-		    </div>
-		</div>
-	</div>
-</body>
-</html>
+	    </div>
+</div>
+{% endblock %}
+{% block header_title %}
+关于
+{% endblock %}
+{% block header_menu %}
+<a href="/">返回首页</a>
+{% endblock %}
