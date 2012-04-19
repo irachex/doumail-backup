@@ -43,11 +43,8 @@ class DoubanRobot(OAuthClient):
         if not recv:
             url = MAIL_OUTBOX
 
-#        try:
         jsondata = self.get(url, params={"max-results":str(cnt), "start-index": str(start), "alt":"json"}).read()
         data = json.loads(jsondata)
-   #     except:
-#            return []
 
         mail_list = []
         entries = data["entry"]
@@ -64,16 +61,17 @@ class DoubanRobot(OAuthClient):
                 mail.time = entry["published"]["$t"]
                 mail.uid = uid
                 mail.name = name
-                mail.recv=recv
+                mail.recv = recv
                 mail.put()
-            except:
+                mail_list.append(mail)
+            except Exception,e:
+                logging.info(e)
                 logging.info(entry)
-            mail_list.append(mail)            
+
         return mail_list
         
     def get_current_user(self):
         data = self.get(ME_URI, params={"alt":"json"}).read()
-        logging.info( data)
         account = Account()
         account.from_json(data)
         self.user = { "name":account.title, "uid":account.uid }

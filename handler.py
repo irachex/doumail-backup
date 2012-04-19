@@ -137,13 +137,13 @@ class OptionHandler(BaseHandler):
                                params={
                                    "uid": user.uid, 
                                    "email": user.email, 
-                                   "title":user.title, 
-                                   "access_key":user.access_key, 
-                                   "access_secret":user.access_secret , 
-                                   "recv":True, 
-                                   "start":1, 
-                                   "count":35, 
-                                   "total":0
+                                   "title": user.title, 
+                                   "access_key": user.access_key, 
+                                   "access_secret": user.access_secret,
+                                   "recv": True,
+                                   "start": 1,
+                                   "count": 35,
+                                   "total": 0
                                }) 
         fqueue.add(ftask)
         
