@@ -74,7 +74,7 @@ class AuthHandler(BaseHandler):
         if uid is not None:
             self.redirect("/option/")
         
-        doubanbot = DoubanRobot(api_key=DB_API_KEY, api_secret=DB_API_SECRET)
+        doubanbot = DoubanRobot(key=DB_API_KEY, secret=DB_API_SECRET)
 
         callback = self.request.get("callback").strip()
         if callback == "true":
@@ -93,12 +93,13 @@ class AuthHandler(BaseHandler):
             self.redirect("/")
         
         try:
-            douban_url = doubanbot.get_auth_url()
+            key, secret = doubanbot.get_request_token()
+            douban_url = doubanbot.get_authorization_url(key, secret, self.request.url+"?callback=true")
         except Exception,e:
             logging.info(e)
             self.render("msg.html", {"msg":"墙挡住了我和豆瓣,等会儿再试试吧", "url":"/"})
             return
-        temp_data = {"douban_url": douban_url + "&oauth_callback=" + escape(self.request.url+"?callback=true&oauth_secret=" + doubanbot.token_secret)}
+        temp_data = {"douban_url": douban_url}
         self.render("auth.html", temp_data)
     
 

@@ -1,172 +1,110 @@
-#!/usr/bin/env python
-# -*- coding: UTF-8 -*-
-import logging
-import binascii
-import cgi
-import hashlib
-import hmac
-import httplib
-import random
+# -*- encoding:utf-8 -*-
+
+import httplib,urlparse,cgi
 import time
-import urllib
-from config import DB_API_KEY as API_KEY, DB_API_SECRET as API_SECRET
+import oauth
 
-SERVER = 'api.douban.com'
- 
-OAUTH_SERVER = 'www.douban.com'
-REQUEST_TOKEN_URI = '/service/auth/request_token'
-AUTHORIZATION_URI = '/service/auth/authorize'
-ACCESS_TOKEN_URI = '/service/auth/access_token'
+signature_method = oauth.OAuthSignatureMethod_HMAC_SHA1()
 
-SIG_METHOD = 'HMAC-SHA1'
-OAUTH_VER = '1.0'
-SCHEME = 'http'
+API_HOST = 'http://api.douban.com'
+AUTH_HOST = 'http://www.douban.com'
+REQUEST_TOKEN_URL = AUTH_HOST+'/service/auth/request_token'
+ACCESS_TOKEN_URL = AUTH_HOST+'/service/auth/access_token'
+AUTHORIZATION_URL = AUTH_HOST+'/service/auth/authorize'
 
+class OAuthClient:
+    def __init__(self, server='www.douban.com', key=None, secret=None):
+        self.server = server
+        self.consumer = oauth.OAuthConsumer(key, secret)
+        self.token = None
 
-def escape(s, safe="~"):
-    return urllib.quote(s, safe)
- 
-def generate_timestamp():
-    return str(int(time.time()))
- 
-def generate_nonce(length=8):
-    return ''.join([str(random.randint(0, 9)) for i in range(length)])
- 
-def normalize_params(params):
-    key_values = [(escape(k), escape(v)) for k,v in params.items()]
-    key_values.sort()
-    return '&'.join(['%s=%s' % (k, v) for k, v in key_values])
- 
-def sign(method, url, params, secret, token_secret):
-    sig = (
-              escape(method.upper()),
-              escape(SCHEME + '://' +  escape(url, safe="/=")),
-              escape(normalize_params(params))
-          )
-    key = escape(secret) + '&'
-    if url == OAUTH_SERVER + ACCESS_TOKEN_URI:
-        #I have no idea why the fuck douban uses concatenated secrets as signature instead of the computed one
-        return secret + '&' + token_secret
-    if token_secret:
-        key += escape(token_secret)
-    base_string = '&'.join(sig)
-    key = str(key)
-    return binascii.b2a_base64(hmac.new(key, base_string, hashlib.sha1).digest())[:-1]
- 
-def generate_header(method, url, params, key, token):
-    header = 'OAuth realm=""'
-    params['oauth_version'] = OAUTH_VER
-    signature = sign(method, url, params, key, token)
-    params['oauth_signature'] = signature
-    key_values = [(k, v) for k,v in params.items()]
-    key_values.sort()
-    for k, v in key_values:
-            header += ', %s="%s"' % (k, escape(v,safe="/%?"))
-    return {"Authorization": header}
- 
-def create_connection(server):
-    return httplib.HTTPConnection(server)
- 
- 
-class DoubanOAuth(object):
-    def __init__(self, key=API_KEY, secret=API_SECRET):
-        self.key = key
-        self.secret = secret
-    
-    def login(self, token_key=None, token_secret=None):
-        if token_key and token_secret:
-            self.token_key = token_key
-            self.token_secret = token_secret
+    def login(self, key=None, secret=None):
+        if key and secret:
+            self.token = oauth.OAuthToken(key, secret)
             return True
-        self.get_request_token()
-    
+
+        key,secret = self.get_request_token()
+        if not key:
+            print 'get request token failed'
+            return 
+        url = self.get_authorization_url(key, secret)
+        print 'please paste the url in your webbrowser, complete the authorization then come back:'
+        print url
+        line = raw_input()
+        
+        key, secret, uid = self.get_access_token(key, secret)
+        if key:
+            return self.login(key, secret)
+        else:
+            print 'get access token failed'
+            return False
+
+    def fetch_token(self, oauth_request):
+        connection = httplib.HTTPConnection("%s:%d" % (self.server, 80))
+        connection.request('GET', urlparse.urlparse(oauth_request.http_url).path,
+            headers=oauth_request.to_header())
+        response = connection.getresponse()
+        r = response.read()
+        try:
+            token = oauth.OAuthToken.from_string(r)
+            params = cgi.parse_qs(r, keep_blank_values=False)
+            user_id = params.get('douban_user_id',[None])[0]
+            return token.key,token.secret, user_id
+        except:
+            return None,None,None
+
     def get_request_token(self):
-        conn = create_connection(OAUTH_SERVER)
-        params = {
-            'oauth_consumer_key': self.key,
-            'oauth_signature_method': SIG_METHOD,
-            'oauth_timestamp': generate_timestamp(),
-            'oauth_nonce': generate_nonce()
-        }
-        header = generate_header('GET', OAUTH_SERVER + REQUEST_TOKEN_URI, params, self.secret, None)
-        
-        conn.request("GET", REQUEST_TOKEN_URI, headers=header)
-        response = conn.getresponse()
-        if response.status == 200:
-            data = response.read()
-            data = cgi.parse_qs(data, keep_blank_values=False)
-            self.token_key = data['oauth_token'][0]
-            self.token_secret = data['oauth_token_secret'][0]
-        else:
-            logging.info( "%s %s\n%s" % (response.status, response.reason, response.read()))
-        conn.close()
+        oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, 
+                        http_url=REQUEST_TOKEN_URL)
+        oauth_request.sign_request(signature_method, self.consumer, None)
+        return self.fetch_token(oauth_request)[:2]
+
+    def get_authorization_url(self, key, secret, callback=None):
+        token = oauth.OAuthToken(key, secret)
+        oauth_request = oauth.OAuthRequest.from_token_and_callback(token=token, 
+                http_url=AUTHORIZATION_URL, callback=callback)
+        return oauth_request.to_url()
  
-    def authorize_token(self):
-        print "Open the link below to authorize the request token:"
-        print "http://%s%s?oauth_token=%s" % (OAUTH_SERVER, AUTHORIZATION_URI, escape(self.token_key))
-        raw_input("Press enter to continue")
-        self.get_access_token()
-        
-    def get_access_token(self, token_key, token_secret):
-        self.token_key = token_key
-        self.token_secret = token_secret
-        
-        conn = create_connection(OAUTH_SERVER)
-        params = {
-            'oauth_consumer_key': self.key,
-            'oauth_token': self.token_key,
-            'oauth_sgnature_method': SIG_METHOD,
-            'oauth_timestamp': generate_timestamp(),
-            'oauth_nonce': generate_nonce()
-        }
-        header = generate_header("GET", OAUTH_SERVER + ACCESS_TOKEN_URI, params, self.secret, self.token_secret)
-        conn.request("GET", ACCESS_TOKEN_URI, headers=header)
-        response = conn.getresponse()
-        if response.status == 200:
-            data = response.read()
-            data = cgi.parse_qs(data, keep_blank_values=False)
-            self.token_key = data['oauth_token'][0]
-            self.token_secret = data['oauth_token_secret'][0]
-        else:
-            logging.info( "%s %s\n%s" % (response.status, response.reason, response.read()))
-        conn.close()
+    def get_access_token(self, key=None, secret=None, token=None):
+        if key and secret:
+            token = oauth.OAuthToken(key, secret)
+        assert token is not None
+        oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, 
+                token=token, http_url=ACCESS_TOKEN_URL)
+        oauth_request.sign_request(signature_method, self.consumer, token)
+        return self.fetch_token(oauth_request)[:3]
  
-    def auth_url(self):
-        self.get_request_token()
-        url = "http://%s%s?oauth_token=%s" % (OAUTH_SERVER, AUTHORIZATION_URI, escape(self.token_key))
-        return url
-        
-    def request(self, method, url, content=None, param=None):
-        if self.token_key is None:
-            print 'need auth'
-            return None
-        conn = create_connection(SERVER)
-        params = {
-            'oauth_consumer_key': self.key,
-            'oauth_token': self.token_key,
-            'oauth_signature_method': SIG_METHOD,
-            'oauth_timestamp': generate_timestamp(),
-            'oauth_nonce': generate_nonce()
-        }
-        
-        if param:
-            params.update(param)
-            
-        header = generate_header(method, SERVER + url, params, self.secret, self.token_secret)
-        if method in ('POST', 'PUT'):
-            header['Content-Type'] = 'application/atom+xml; charset=utf-8'
-        conn.request(method, escape(url,safe="/?=&") , content, header)
-        response = conn.getresponse()
-        return response
-        
+    def get_auth_header(self, method, uri, parameter={}):
+        if self.token:
+            if not uri.startswith('http'):
+                uri = API_HOST + uri
+            oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, 
+                    token=self.token, http_method=method, http_url=uri, parameters=parameter)
+            oauth_request.sign_request(signature_method, self.consumer, self.token)
+            return oauth_request.to_header()
+        else:
+            return {}
+ 
+    def access_resource(self, method, url, body=None):
+        oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, 
+                token=self.token, http_url=url)
+        oauth_request.sign_request(signature_method, self.consumer, self.token)
+        headers = oauth_request.to_header()
+        if method in ('POST','PUT'):
+            headers['Content-Type'] = 'application/atom+xml; charset=utf-8'
+        connection = httplib.HTTPConnection("%s:%d" % (self.server, 80))
+        connection.request(method, url, body=body,
+            headers=headers)
+        return connection.getresponse()
+
+
+def test():
+    API_KEY = '' 
+    SECRET = ''
+    client = OAuthClient(key=API_KEY, secret=SECRET)
+    client.login()
+    res = client.access_resource('GET', 'http://api.douban.com/test?a=b&c=d').read()
+    print res
 
 if __name__ == '__main__':
-    test = DoubanOAuth()
-    test.login()
-    print test.token_key, test.token_secret
-    entry = u'<?xml version=\'1.0\' encoding=\'UTF-8\'?>'\
-                            + u'<entry xmlns:ns0="http://www.w3.org/2005/Atom" xmlns:db="http://www.douban.com/xmlns/">'\
-                            + u'<content>' +  u'hello from api' + u'</content>'\
-                            + u'</entry>'
-    #data = test.request('POST', '/miniblog/saying', entry)
-    #print data.status, data.reason
+    test()

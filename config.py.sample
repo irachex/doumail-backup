@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 TIME_DELTA = 60*10
 
-DB_API_KEY = '****'
-DB_API_SECRET = '****'
+DB_API_KEY = ''
+DB_API_SECRET = ''
 
 ADMIN_MAIL = 'no-reply@doubackup.com'

@@ -9,32 +9,25 @@ try:
 except:
     import json
 
-from client import DoubanOAuth
-from model import Account, Mail
+from client import OAuthClient
+#from model import Account, Mail
 
 ME_URI = "/people/@me"
 MINIBLOG_URI = "/people/@me/miniblog"
 MAIL_INBOX = "/doumail/inbox"
 MAIL_OUTBOX = "/doumail/outbox"
 
-class DoubanRobot(object):
+class DoubanRobot(OAuthClient):
     user = None
-    def __init__(self, key=None, secret=None, api_key=None, api_secret=None):
-        if api_key and api_secret:
-            self.client = DoubanOAuth(api_key, api_secret)
-        else:
-            self.client = DoubanOAuth()
-        if key and secret:
-            self.client.login(key, secret)
     
     def get(self, url, param=None):
-        return self.client.request('GET', url, param=param)
+        return self.access_resource('GET', url, param=param)
 
     def put(self, url, body=None):
-        return self.client.request('PUT', url, body and body.encode('utf-8'))
+        return self.access_resource('PUT', url, body and body.encode('utf-8'))
 
     def post(self, url, body=None):
-        return self.client.request('POST', url, body and body.encode('utf-8'))
+        return self.access_resource('POST', url, body and body.encode('utf-8'))
         
     def get_mail_content(self, mail_id):
         """ get single mail's content """
@@ -75,9 +68,6 @@ class DoubanRobot(object):
             mail_list.append(mail)            
         return mail_list
     
-    def get_auth_url(self):
-        return self.client.auth_url()
-    
     def get_access_token(self, token_key, token_secret):
         self.client.get_access_token(token_key, token_secret)
         
@@ -103,8 +93,9 @@ def escape(s):
 
 def test():
     from config import DB_API_KEY, DB_API_SECRET
-    robot = DoubanRobot(api_key=DB_API_KEY, api_secret=DB_API_SECRET)
-    raw_input(robot.get_auth_url())
+    robot = DoubanRobot(key=DB_API_KEY, secret=DB_API_SECRET)
+    key, secret = robot.get_request_token()
+    raw_input(robot.get_authorization_url(key, secret))
     
     robot.get_current_user()
         
