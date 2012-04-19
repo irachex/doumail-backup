@@ -52,20 +52,22 @@ class DoubanRobot(OAuthClient):
         mail_list = []
         entries = data["entry"]
         for entry in entries:
-            mid = entry["id"]["$t"].replace("http://api.douban.com/doumail/", "")
-            mail = Mail.get_or_insert(key_name=mid)
-            mail.id = mid
-            mail.content = self.get_mail_content(mail.id)
-            mail.title = entry["title"]["$t"]
-            author = entry["author"]
-            mail.author_name = author["name"]["$t"]
-            mail.author_id = author["uri"]["$t"]
-            mail.time = entry["published"]["$t"]
-            mail.uid = uid
-            mail.name = name
-            mail.recv=recv
-            mail.put()
-            
+            try:
+                mid = entry["id"]["$t"].replace("http://api.douban.com/doumail/", "")
+                mail = Mail.get_or_insert(key_name=mid)
+                mail.id = mid
+                mail.content = self.get_mail_content(mail.id)
+                mail.title = entry["title"]["$t"].replace("\n", "");
+                author = entry["author"]
+                mail.author_name = author["name"]["$t"]
+                mail.author_id = author["uri"]["$t"]
+                mail.time = entry["published"]["$t"]
+                mail.uid = uid
+                mail.name = name
+                mail.recv=recv
+                mail.put()
+            except:
+                logging.info(entry)
             mail_list.append(mail)            
         return mail_list
         

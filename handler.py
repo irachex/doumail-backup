@@ -189,7 +189,6 @@ class FetchHandler(BaseHandler):
         
         doubanbot = DoubanRobot(key=DB_API_KEY, secret=DB_API_SECRET)
         doubanbot.login(access_key, access_secret)
-        logging.info(access_key, access_secret)
         mail_list = doubanbot.get_mails(recv=recv, start=start, cnt=count, uid=uid, name=title)
         if not mail_list:
             if recv:
