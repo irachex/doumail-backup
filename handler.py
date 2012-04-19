@@ -166,23 +166,6 @@ class DoneHandler(BaseHandler):
 
 class AboutHandler(BaseHandler):
     def get(self):
-        uid="iRachex"
-        email = self.get_session("email")
-        mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1", uid)
-        recvmails = self.render_string("doumail.txt", {"mails":mail_list})
-        logging.info(recvmails)
-        
-        mail_list = db.GqlQuery("SELECT * FROM Mail WHERE uid=:1", uid)
-        sendmails = self.render_string("doumail.txt", {"mails":mail_list})
-        
-        mail.send_mail(sender="no-reply@doubackup.com",
-                       to=email,
-                       subject="豆邮备份",
-                       body="""
-                       你的豆邮备份
-                       """,
-                       attachments=[("收件箱.txt",recvmails),("发件箱.txt",sendmails)])
-        
         self.render("about.html")
 
         
